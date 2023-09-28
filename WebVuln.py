@@ -32,6 +32,8 @@ from CORE.sql_injection import test_sql_injection
 from CORE.openredir import test_open_redirection_payloads
 from CORE.clickjacking import test_for_clickjacking
 from CORE.directoryTraversal import directoryTraversal
+from CORE.xss import xss
+from CORE.sensitive_info import scan_for_sensitive_data
 # Disable insecure request warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
