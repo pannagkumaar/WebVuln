@@ -176,24 +176,7 @@ def FileInputAvailable(url, output_file):
             report.close()
 
 
-def find_input_fields(url):
-    try:
-        # Send an HTTP GET request to the URL
-        response = requests.get(url, verify=False)
-        response.raise_for_status()
 
-        # Parse the HTML content of the response
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        # Find input fields (text, password, textarea)
-        input_fields = soup.find_all(["input", "textarea"], {
-                                     "type": ["text", "password"]})
-
-        return input_fields
-
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching URL: {str(e)}")
-        return []
 
 
 # def submit_form(url, form_data):
@@ -208,124 +191,9 @@ def find_input_fields(url):
 
 
 
-def xss(url, output_file, num_requests=10):
-    if not prompt_user("xss"):
-        return
-
-    xss_payloads = []
-
-    try:
-        with open("./Payloads/PayloadXSS.txt", "r", encoding="utf-8") as xss_file:
-            xss_payloads = [line.strip() for line in xss_file]
-    except Exception as e:
-        print("[-] Error loading XSS payloads:", str(e))
-
-    # Use the find_input_fields function to extract input fields
-    input_fields = find_input_fields(url)
-
-    if not input_fields:
-        print("[-] No input fields found on the page.")
-        with open(output_file, "a") as report:
-            report.write("[-] No input fields found on the page.\n")
-        return
-
-    equal_sign_index = url.find("=")
-
-    if equal_sign_index != -1:
-        user_agent = UserAgent()
-
-        for i in range(num_requests):
-            payload = xss_payloads[i % len(xss_payloads)]  # Rotate payloads
-            headers = {'User-Agent': user_agent.random}
-
-            try:
-                full_url = url[:equal_sign_index + 1] + payload
-                response = requests.get(full_url, headers=headers, timeout=10)
-
-                if payload in response.content.decode('utf-8', 'ignore'):
-                    result = "[+] XSS payload: "
-                else:
-                    result = "[-] XSS payload: "
-
-                print(result, payload)
-                print("[+] XSS URL: ", full_url)
-
-                with open(output_file, "a") as report:
-                    report.write(
-                        f"{result} {payload}\n[+] XSS URL: {full_url}\n")
-            except Exception as e:
-                pass
-    else:
-        print("[-] XSS isn't available")
-        with open(output_file, "a") as report:
-            report.write("[-] XSS isn't available\n")
 
 
-def scan_for_sensitive_data(urls_to_scan, output_file):
-    try:
-        with open(output_file, "a") as report:
-            report.write("[+] Scanning for sensitive data...\n")
-    except Exception as e:
-        print("[-] Error opening the output file:", str(e))
 
-    results = []
-
-    def extract_text_from_url(url):
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.text, 'html.parser')
-            return soup.get_text()
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching {url}: {str(e)}")
-            return ""
-
-    def find_sensitive_data(url, content):
-        sensitive_data = []
-
-        # Example: Social Security Numbers (basic pattern)
-        ssn_pattern = r'\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b'
-        ssns = re.findall(ssn_pattern, content)
-        if ssns:
-            sensitive_data.extend(
-                [(ssn, "Social Security Number") for ssn in ssns])
-
-        # Add more patterns and PII types as needed
-
-        return sensitive_data
-
-    for url in urls_to_scan:
-        # Validate the URL
-        parsed_url = urlparse(url)
-        if not all([parsed_url.scheme, parsed_url.netloc]):
-            print(f"Invalid URL: {url}")
-            continue
-
-        content = extract_text_from_url(url)
-        if not content:
-            continue
-
-        found_sensitive_data = find_sensitive_data(url, content)
-
-        if found_sensitive_data:
-            result = {
-                "url": url,
-                "sensitive_data": found_sensitive_data
-            }
-            results.append(result)
-
-    try:
-        with open(output_file, "a") as report:
-            if results:
-                report.write("[+] Sensitive data found:\n")
-                for result in results:
-                    report.write(f"URL: {result['url']}\n")
-                    for data, data_type in result['sensitive_data']:
-                        report.write(f"{data_type}: {data}\n")
-            else:
-                report.write("[-] No sensitive data found.\n")
-    except Exception as e:
-        print("[-] Error writing to the output file:", str(e))
 
 
 def crawl(url, output_file, num_threads=5):
