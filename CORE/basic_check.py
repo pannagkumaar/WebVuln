@@ -347,6 +347,20 @@ def urlEncode(url, output_file):
     report.write(report_toadd)
     report.close()
 
+def remote_code_execution(url,output_file):
+    payload = "system('ls');"
+    # sending request to the URL with the payload and retrieve the response
+    response = requests.get(url, params={"input": payload})
+
+    # check the response for the presence of certain strings or patterns that may indicate a vulnerability
+    if "total" in response.text:
+        print(
+            "[!] Possible RCE vulnerability detected: command output found in response")
+        print("[+] Remedation: Use Secure Coding Practices.")
+
+    else:
+        print("[!] No Remote Code Execution Vulnerability Detected.")
+
 
 def certificateInformation(url, output_file):
     try:

@@ -1,23 +1,6 @@
 import argparse
 import requests
-import re
-from fake_useragent import UserAgent
-import socket
-import ssl
-from urllib.parse import urlparse
-import telnetlib
-from email.utils import parseaddr
-from lxml import html
-# from urllib.parse import urlparse
-import urllib
-# import time
-import os
-import re
-import logging
-import validators
-import concurrent.futures
 import urllib3
-from bs4 import BeautifulSoup
 # import threading
 import concurrent.futures
 from CORE.subdomain_scanner import *
@@ -105,44 +88,6 @@ def fileInclude(url, output_file):
         pass
 
         
-def remote_code_execution(url):
-    payload = "system('ls');"
-    # sending request to the URL with the payload and retrieve the response
-    response = requests.get(url, params={"input": payload})
-
-    # check the response for the presence of certain strings or patterns that may indicate a vulnerability
-    if "total" in response.text:
-        print(
-            "[!] Possible RCE vulnerability detected: command output found in response")
-        print("[+] Remedation: Use Secure Coding Practices.")
-
-    else:
-        print("[!] No Remote Code Execution Vulnerability Detected.")
-
-
-
-
-
-
-
-
-# def submit_form(url, form_data):
-#     try:
-#         response = requests.post(url, data=form_data)
-#         return response, response.status_code == 200
-
-#     except requests.exceptions.RequestException as e:
-#         print(f"[-] Error: {e}")
-#         return None, False
-
-
-
-
-
-
-
-
-
 
 
 if args:
@@ -219,9 +164,9 @@ if args:
         IP2Location(url, output_file)
 
     elif args.action == "FileInputAvailable":
-        FileInputAvailable(url, output_file)
+        file_input_available(url, output_file)
     if args.action == "remote_code_execution":
-        remote_code_execution(url)
+        remote_code_execution(url,output_file)
     elif args.action == "certificateInformation":
         certificateInformation(url, output_file)
     elif args.action == "securityHeadersCheck":
@@ -255,7 +200,7 @@ if args:
         # credit(url, output_file)
         # portScanner(url, output_file)
         # FileInputAvailable(url, output_file)
-        # remote_code_execution(url)
+        # remote_code_execution(url,output_file)
         # detect_jinja_vulnerability(url)
         # test_sql_injection(url, output_file)
         # xss(url, output_file)
