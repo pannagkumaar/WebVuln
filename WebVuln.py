@@ -6,7 +6,7 @@ import socket
 import ssl
 from urllib.parse import urlparse
 import telnetlib
-import whois
+
 from lxml import html
 # from urllib.parse import urlparse
 import urllib
@@ -20,6 +20,11 @@ import urllib3
 from bs4 import BeautifulSoup
 # import threading
 import concurrent.futures
+from CORE.subdomain_scanner import *
+from CORE.who_is import *
+from CORE.dns_dumper import *
+from CORE.credit import *
+
 
 # Disable insecure request warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -47,49 +52,7 @@ def is_valid_url(url):
         return False
 
 
-def whois_finder(url, output_file):
-    try:
-        query = whois.whois(url)
 
-        with open(output_file, "a", encoding="utf-8") as report:
-            report.write("[+]Domain: {}\n".format(query.domain))
-            report.write(
-                "[+]Update time: {}\n".format(query.get('updated_date')))
-            report.write(
-                "[+]Expiration time: {}\n".format(query.get('expiration_date')))
-            report.write(
-                "[+]Name server: {}\n".format(query.get('name_servers')))
-            report.write("[+]Email: {}\n".format(query.get('emails')))
-
-            # Additional features:
-            if 'registrar' in query:
-                report.write("[+]Registrar: {}\n".format(query.registrar))
-            if 'org' in query:
-                report.write("[+]Organization: {}\n".format(query.org))
-            if 'status' in query:
-                status = query.status
-                if isinstance(status, (list, tuple)):
-                    report.write("[+]Status: {}\n".format(", ".join(status)))
-                else:
-                    report.write("[+]Status: {}\n".format(status))
-
-            # Write registrant name, province, and country to the report file
-            if 'registrant_name' in query:
-                report.write(
-                    "[+]Registrant Name: {}\n".format(query.registrant_name))
-            if 'registrant_state_province' in query:
-                report.write(
-                    "[+]Registrant State/Province: {}\n".format(query.registrant_state_province))
-            if 'registrant_country' in query:
-                report.write(
-                    "[+]Registrant Country: {}\n".format(query.registrant_country))
-
-    except whois.parser.PywhoisError as e:
-        # Handle WHOIS query errors
-        error_message = "[-]WHOIS query error: {}".format(e)
-        print(error_message)
-        with open(output_file, "a", encoding="utf-8") as report:
-            report.write(error_message + "\n")
 
 
 def write_to_report(output_file, content):
@@ -97,6 +60,59 @@ def write_to_report(output_file, content):
     with open(output_file, "a") as report:
         report.write(content + "\n")
 
+
+
+def test_for_clickjacking(url, output_file):
+    def check_for_frame_busting_scripts(soup):
+        scripts = soup.find_all('script')
+        for script in scripts:
+            if 'frameElement' in script.text or 'top.location' in script.text:
+                return True
+        return False
+    try:
+        if not (url.startswith("http://") or url.startswith("https://")):
+            url = "http://" + url
+
+        result = ""
+        result += f"[~] Testing Clickjacking Test: {url}\n"
+
+        headers = {
+            'User-Agent': UserAgent().random,
+        }
+
+        resp = requests.get(url, headers=headers)
+
+        x_frame_options = resp.headers.get("X-Frame-Options")
+        content_security_policy = resp.headers.get("Content-Security-Policy")
+
+        if x_frame_options:
+            result += "\n[+] X-Frame-Options Header is present"
+            if "ALLOW-FROM" in x_frame_options:
+                result += "\n[-] The site is potentially vulnerable to clickjacking if the attacker controls the specified URI"
+            else:
+                result += "\n[-] You can't clickjack this site !\n"
+        else:
+            result += "[*] X-Frame-Options Header is missing !"
+            result += "[+] Clickjacking is possible, this site is vulnerable to Clickjacking\n"
+
+        if content_security_policy:
+            result += "\n[+] Content-Security-Policy Header is present"
+            if "frame-ancestors" not in content_security_policy:
+                result += "\n[-] The site is potentially vulnerable to clickjacking due to misconfigured Content-Security-Policy"
+
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        if check_for_frame_busting_scripts(soup):
+            result += "\n[+] The site uses JavaScript frame busting scripts"
+
+        write_to_report(output_file, result)
+
+    except requests.exceptions.RequestException as ex:
+        error_message = f"Exception caught while making the request: {str(ex)}"
+        write_to_report(output_file, error_message)
+    except Exception as ex:
+        error_message = f"An unexpected error occurred: {str(ex)}"
+        write_to_report(output_file, error_message)
+        
 
 def certificate_information(url, output_file):
     try:
@@ -249,109 +265,6 @@ def commandInjection(url, output_file):
         pass
 
 
-def dnsdumper(url, output_file):
-    output_file = open(output_file, "a")
-
-    def extract_dns_info(table):
-        dns_records = []
-        rows = table.find_all('tr')
-        for row in rows[1:]:  # Skip the header row
-            columns = row.find_all('td')
-            if len(columns) >= 3:
-                domain = columns[0].get_text()
-                ip = columns[1].get_text()
-                as_info = columns[2].get_text()
-                dns_records.append({'domain': domain, 'ip': ip, 'as': as_info})
-        return dns_records
-
-    def get_dns_info(domain):
-        try:
-            ip_addresses = socket.gethostbyname_ex(domain)
-            return ip_addresses
-        except socket.gaierror as e:
-            return str(e)
-
-    parsed_url = urlparse(url)
-    domain = parsed_url.netloc
-
-    dnsdumpster_url = 'https://dnsdumpster.com/'
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
-    }
-
-    try:
-        # Send a GET request to obtain the CSRF token
-        session = requests.Session()
-        response = session.get(dnsdumpster_url, headers=headers)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        csrf_token = soup.find(
-            'input', attrs={'name': 'csrfmiddlewaretoken'})['value']
-    except (AttributeError, IndexError, requests.RequestException) as e:
-        print(f'Error retrieving CSRF token: {str(e)}')
-        return
-
-    if csrf_token:
-        print(f'Retrieved csrf token: {csrf_token}')
-        output_file.write(f'[+]Retrieved csrf token: {csrf_token} \n')
-        cookies = {'csrftoken': csrf_token}
-        headers['Referer'] = dnsdumpster_url
-        data = {'csrfmiddlewaretoken': csrf_token,
-                'targetip': domain, 'user': 'free'}
-
-        try:
-            # Send a POST request with the CSRF token and target domain
-            response = session.post(
-                dnsdumpster_url, cookies=cookies, data=data, headers=headers)
-
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.content, 'html.parser')
-                tables = soup.find_all('table')
-                res = {}
-                res['domain'] = domain
-                res['dns_records'] = {}
-                res['dns_records']['dns'] = extract_dns_info(tables[0])
-                res['dns_records']['mx'] = extract_dns_info(tables[1])
-
-                print('[+]Search for DNS Servers', end=' ')
-                if len(res['dns_records']['dns']) == 0:
-                    print('- No DNS servers found')
-                for entry in res['dns_records']['dns']:
-                    print(f'Host : {entry["domain"]}')
-                    print(f'IP : {entry["ip"]}')
-                    print(f'AS : {entry["as"]}')
-                    print('-' * 20)
-                    if output_file:
-                        output_file.write(f'[+]Host : {entry["domain"]}\n')
-                        output_file.write(f'[+]IP : {entry["ip"]}\n')
-                        output_file.write(f'[+]AS : {entry["as"]}\n')
-                        output_file.write('-' * 20 + '\n')
-
-                print('[+]Search for MX Records', end=' ')
-                if len(res['dns_records']['mx']) == 0:
-                    print('- No MX records found')
-                for entry in res['dns_records']['mx']:
-                    print(f'Host : {entry["domain"]}')
-                    print(f'IP : {entry["ip"]}')
-                    print(f'AS : {entry["as"]}')
-                    print('-' * 20)
-                    if output_file:
-                        output_file.write(f'[+]Host : {entry["domain"]}\n')
-                        output_file.write(f'[+]IP : {entry["ip"]}\n')
-                        output_file.write(f'[+]AS : {entry["as"]}\n')
-                        output_file.write('-' * 20 + '\n')
-
-                # Get DNS information for the specified domain
-                dns_info = get_dns_info(domain)
-                print(f'DNS information for {domain}: {dns_info}')
-                if output_file:
-                    output_file.write(
-                        f'[+]DNS information for {domain}: {dns_info}\n')
-            else:
-                print(f'Failed to fetch DNS data for {url}')
-        except requests.RequestException as e:
-            print(f'Error fetching DNS data: {str(e)}')
-    else:
-        print('CSRF token not found.')
 
 
 def directoryTraversal(url, output_file, payload_file="payloads.txt", headers=None, cookies=None, timeout=5, max_workers=None):
@@ -529,60 +442,114 @@ def headerInformation(url, output_file):
         print("Error:", e)
 
 
-def subdomain_and_domain_scanner(url, output_file):
-    try:
-        user_agent = UserAgent()
-        headers = {'User-Agent': user_agent.random}
+# def subdomain_and_domain_scanner(url, output_file):
+#     try:
+#         user_agent = UserAgent()
+#         headers = {'User-Agent': user_agent.random}
 
-        response = requests.get(url, headers=headers, verify=False)
-        response.raise_for_status()
+#         response = requests.get(url, headers=headers, verify=False)
+#         response.raise_for_status()
 
-        content = response.content.decode('utf-8')
+#         content = response.content.decode('utf-8')
 
-        # Define a regular expression pattern to capture subdomains and domains
-        pattern = r"(?i)\bhttps?://([a-z0-9.\-]+[.](?:com|net|org|...))"
+#         # Define a regular expression pattern to capture subdomains and domains
+#         pattern = r"(?i)\bhttps?://([a-z0-9.\-]+[.](?:com|net|org|...))"
 
-        matches = re.findall(pattern, content)
+#         matches = re.findall(pattern, content)
 
-        with open(output_file, "a") as report:
-            for match in matches:
-                print("[+] Link:", match)
-                report.write(f"[+] Link: {match}\n")
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error: {e}")
+#         with open(output_file, "a") as report:
+#             for match in matches:
+#                 print("[+] Link:", match)
+#                 report.write(f"[+] Link: {match}\n")
+#     except requests.exceptions.RequestException as e:
+#         logging.error(f"Error: {e}")
 
             
-def portScanner(target, output_file):
-    # Define a dictionary of common ports and their associated services
-    common_ports = {
-        21: "FTP",
-        22: "SSH",
-        23: "Telnet",
-        25: "SMTP",
-        53: "DNS",
-        80: "HTTP",
-        443: "HTTPS",
-        3306: "MySQL",
-        5432: "PostgreSQL",
-    }
+# def portScanner(target, output_file):
+#     # Define a dictionary of common ports and their associated services
+#     common_ports = {
+#         21: "FTP",
+#         22: "SSH",
+#         23: "Telnet",
+#         25: "SMTP",
+#         53: "DNS",
+#         80: "HTTP",
+#         443: "HTTPS",
+#         3306: "MySQL",
+#         5432: "PostgreSQL",
+#     }
 
-    def scan_port(host, port):
-        try:
-            with telnetlib.Telnet(host, port, timeout=1) as connection:
-                banner = connection.read_until(b"\n", timeout=1).decode("utf-8").strip()
-                service = common_ports.get(port, "Unknown")
-                return port, "open", service, banner
-        except ConnectionRefusedError:
-            return port, "closed", "Unknown", ""
-        except TimeoutError:
-            return port, "filtered", "Unknown", ""
-        except Exception as e:
-            return port, "error", "Unknown", str(e)
+#     def scan_port(host, port):
+#         try:
+#             with telnetlib.Telnet(host, port, timeout=1) as connection:
+#                 banner = connection.read_until(b"\n", timeout=1).decode("utf-8").strip()
+#                 service = common_ports.get(port, "Unknown")
+#                 return port, "open", service, banner
+#         except ConnectionRefusedError:
+#             return port, "closed", "Unknown", ""
+#         except TimeoutError:
+#             return port, "filtered", "Unknown", ""
+#         except Exception as e:
+#             return port, "error", "Unknown", str(e)
+
+#     try:
+#         parsed_url = urlparse(target)
+#         host = socket.gethostbyname(parsed_url.netloc)
+#     except socket.gaierror:
+#         print("Invalid target URL.")
+#         return
+
+#     try:
+#         start_port = int(input("Enter the start port: "))
+#         end_port = int(input("Enter the end port: "))
+
+#         open_ports = []
+
+#         # Define a function to scan a range of ports and collect open ports
+#         def scan_port_range(start, end):
+#             for port in range(start, end + 1):
+#                 result = scan_port(host, port)
+#                 port, status, _, _ = result
+#                 if status == "open":
+#                     open_ports.append(port)
+
+#         # Determine the number of CPU cores available
+#         num_cores = min(4   , os.cpu_count() or 1)
+
+#         # Use concurrent.futures.ThreadPoolExecutor for parallel scanning
+#         with concurrent.futures.ThreadPoolExecutor(max_workers=num_cores) as executor:
+#             # Split the port range into chunks for parallel scanning
+#             chunk_size = (end_port - start_port + 1) // num_cores
+#             futures = []
+
+#             for i in range(num_cores):
+#                 start = start_port + i * chunk_size
+#                 end = start + chunk_size - 1 if i < num_cores - 1 else end_port
+#                 futures.append(executor.submit(scan_port_range, start, end))
+
+#             # Wait for all futures to complete
+#             concurrent.futures.wait(futures)
+
+#         with open(output_file, "a") as report:
+#             report.write(f"Scanning target: {target} ({host})\n")
+#             report.write("Open Ports:\n")
+#             for port in open_ports:
+#                 report.write(f"{port}\n")
+
+#         print(f"Scan completed. Results saved to {output_file}")
+#         print(f"Number of open ports: {len(open_ports)}")
+
+#     except ValueError:
+#         print("Invalid input. Please enter valid port numbers.")
+
+
+def portScanner(target, output_file):
+    nm = nmap.PortScanner()
 
     try:
         parsed_url = urlparse(target)
-        host = socket.gethostbyname(parsed_url.netloc)
-    except socket.gaierror:
+        host = parsed_url.netloc
+    except ValueError:
         print("Invalid target URL.")
         return
 
@@ -590,32 +557,15 @@ def portScanner(target, output_file):
         start_port = int(input("Enter the start port: "))
         end_port = int(input("Enter the end port: "))
 
+        # Perform the port scan
+        nm.scan(host, f"{start_port}-{end_port}")
+
         open_ports = []
 
-        # Define a function to scan a range of ports and collect open ports
-        def scan_port_range(start, end):
-            for port in range(start, end + 1):
-                result = scan_port(host, port)
-                port, status, _, _ = result
-                if status == "open":
+        for host, scan_result in nm.all_hosts().items():
+            for port, protocol in scan_result['tcp'].items():
+                if protocol['state'] == 'open':
                     open_ports.append(port)
-
-        # Determine the number of CPU cores available
-        num_cores = min(4   , os.cpu_count() or 1)
-
-        # Use concurrent.futures.ThreadPoolExecutor for parallel scanning
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_cores) as executor:
-            # Split the port range into chunks for parallel scanning
-            chunk_size = (end_port - start_port + 1) // num_cores
-            futures = []
-
-            for i in range(num_cores):
-                start = start_port + i * chunk_size
-                end = start + chunk_size - 1 if i < num_cores - 1 else end_port
-                futures.append(executor.submit(scan_port_range, start, end))
-
-            # Wait for all futures to complete
-            concurrent.futures.wait(futures)
 
         with open(output_file, "a") as report:
             report.write(f"Scanning target: {target} ({host})\n")
@@ -856,7 +806,7 @@ def detect_jinja_vulnerability(url):
         print(f"Error: {str(e)}")
 
 
-def test_sql_injection(url, output_file, method='GET', parameters=None, payload_file="sqlpayload.txt"):
+def test_sql_injection(url, output_file, method='GET', parameters=None, payload_file="Payloads/PayloadSQL"):
     try:
         if method not in ('GET', 'POST'):
             raise ValueError("Invalid HTTP method. Use 'GET' or 'POST'.")
@@ -1285,94 +1235,7 @@ def extract_emails(text):
     return re.findall(email_pattern, text)
 
 
-def credit(url, output_file):
-    response = requests.get(url, verify=False)
-    content = str(response).split()
-    content_combined = str("".join(content))
-    AMEX = re.match(r"^3[47][0-9]{13}$", content_combined)
-    VISA = re.match(r"^4[0-9]{12}(?:[0-9]{3})?$", content_combined)
-    MASTERCARD = re.match(r"^5[1-5][0-9]{14}$", content_combined)
-    DISCOVER = re.match(r"^6(?:011|5[0-9]{2})[0-9]{12}$", content_combined)
-    try:
-        if MASTERCARD.group():
-            print("[+]Website has a Master Card!")
-            print(MASTERCARD.group())
-            report = open(output_file, "a")
-            report_toadd = "[+]Website has a Master Card!\n"
-            report_toadd += MASTERCARD.group()+"\n"
-            report.write(report_toadd)
-            report.close()
 
-    except:
-        print("[-]Website hasn't a Mastercard!")
-        report = open(output_file, "a")
-        report_toadd = "[-]Website hasn't MasterCard!\n"
-        report.write(report_toadd)
-        report.close()
-    try:
-        if VISA.group():
-            print("[+]Website has a VISA card!")
-            print(VISA.group())
-            report = open(output_file, "a")
-            report_toadd = "[+]Website has a VISA card!\n"
-            report_toadd += VISA.group()+"\n"
-            report.write(report_toadd)
-            report.close()
-    except:
-        print("[-]Website hasn't a VISA card!")
-        report = open(output_file, "a")
-        report_toadd = "[-]Website hasn't a VISA card!\n"
-        report.write(report_toadd)
-        report.close()
-    try:
-        if AMEX.group():
-            print("[+]Website has a AMEX card!")
-            print(AMEX.group())
-            report = open(output_file, "a")
-            report_toadd = "[+]Website has a AMEX card!\n"
-            report_toadd += AMEX.group()+"\n"
-            report.write(report_toadd)
-            report.close()
-    except:
-        print("[-]Website hasn't a AMEX card!")
-        report = open(output_file, "a")
-        report_toadd = "[-]Website hasn't a AMEX card!\n"
-        report.write(report_toadd)
-        report.close()
-    try:
-        if DISCOVER.group():
-            print("[+]Website has a DISCOVER card!")
-            print(DISCOVER.group())
-            report = open(output_file, "a")
-            report_toadd = "[+]Website has a DISCOVER card!\n"
-            report_toadd += DISCOVER.group()+"\n"
-            report.write(report_toadd)
-            report.close()
-    except:
-        print("[-]Website hasn't a DISCOVER card!")
-        report = open(output_file, "a")
-        report_toadd = "[-]Website hasn't a DISCOVER card!\n"
-        report.write(report_toadd)
-        report.close()
-
-
-def link(url, output_file):
-    first_dot_index = url.find(".")
-    domain = url[first_dot_index + 1:]
-    second_dot_index = domain.find(".")
-    domain = domain[:second_dot_index]
-    response = requests.get(url, verify=False)
-    content = response.content.decode('utf-8')
-    sonuc = re.findall(
-        r"""(?i)\b((?:https?:(?:/{1,3}|[a-z0-9%])|[a-z0-9.\-]+[.](?:com|net|org|edu|gov|mil|aero|asia|biz|cat|coop|info|int|jobs|mobi|museum|name|post|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|Ja|sk|sl|sm|sn|so|sr|ss|st|su|sv|sx|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)/)(?:[^\s()<>{}\[\]]+|\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\))+(?:\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’])|(?:(?<!@)[a-z0-9]+(?:[.\-][a-z0-9]+)*[.](?:com|net|org|edu|gov|mil|aero|asia|biz|cat|coop|info|int|jobs|mobi|museum|name|post|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|Ja|sk|sl|sm|sn|so|sr|ss|st|su|sv|sx|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)\b/?(?!@)))""",
-        content)
-    for i in sonuc:
-        if domain in i:
-            print("[+]Links:", i)
-            report = open(output_file, "a")
-            report_toadd = "[+]Links:"+i+"\n"
-            report.write(report_toadd)
-            report.close()
 
 
 if args:
@@ -1469,34 +1332,35 @@ if args:
 
     elif args.action == "full":
 
-        dnsdumper(url, output_file)
-        whois_finder(url, output_file)
-        IP2Location(url, output_file)
-        certificateInformation(url, output_file)
-        securityHeadersCheck(url, output_file)
-        csrf_scan(url)
-        broken_auth(url)
-        advancedSecurityHeadersCheck(url, output_file)
-        robotstxtAvailable(url, output_file)
-        urlEncode(url, output_file)
-        method(url, output_file)
-        link(url, output_file)
-        crawl(url, output_file)
-        headerInformation(url, output_file)
-        mail(url, output_file)
-        credit(url, output_file)
-        portScanner(url, output_file)
-        FileInputAvailable(url, output_file)
-        remote_code_execution(url)
-        detect_jinja_vulnerability(url)
+        # dnsdumper(url, output_file)
+        # whois_finder(url, output_file)
+        # IP2Location(url, output_file)
+        # certificateInformation(url, output_file)
+        # securityHeadersCheck(url, output_file)
+        # csrf_scan(url)
+        # broken_auth(url)
+        # advancedSecurityHeadersCheck(url, output_file)
+        # robotstxtAvailable(url, output_file)
+        # urlEncode(url, output_file)
+        # method(url, output_file)
+        # link(url, output_file)
+        # crawl(url, output_file)
+        # headerInformation(url, output_file)
+        # mail(url, output_file)
+        # credit(url, output_file)
+        # portScanner(url, output_file)
+        # FileInputAvailable(url, output_file)
+        # remote_code_execution(url)
+        # detect_jinja_vulnerability(url)
         test_sql_injection(url, output_file)
-        xss(url, output_file)
-        test_open_redirection_payloads(
-            url, "./Payloads/PayloadOpenRed.txt", output_file)
-        commandInjection(url, output_file)
-        directoryTraversal(url, output_file)
-        fileInclude(url, output_file)
-        subdomain_and_domain_scanner(url, output_file)
+        # xss(url, output_file)
+        # test_open_redirection_payloads(
+        #     url, "./Payloads/PayloadOpenRed.txt", output_file)
+        # commandInjection(url, output_file)
+        # directoryTraversal(url, output_file)
+        # fileInclude(url, output_file)
+        # subdomain_scanner(url, output_file)
+        # test_for_clickjacking(url,  output_file)
     else:
 
         print("Invalid action exiting ", args.action)
