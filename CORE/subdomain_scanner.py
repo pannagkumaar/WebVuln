@@ -1,7 +1,7 @@
 import requests
 import re
 from fake_useragent import UserAgent
-
+import concurrent.futures
 def fetch_content(url):
     try:
         user_agent = UserAgent()

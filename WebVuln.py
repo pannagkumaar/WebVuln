@@ -26,6 +26,7 @@ from CORE.dns_dumper import dnsdumper
 from CORE.credit import credit
 from CORE.mail import mail
 from CORE.basic_check import *
+from CORE.portscanner import portScanner
 
 # Disable insecure request warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -264,125 +265,6 @@ def fileInclude(url, output_file):
     except:
         pass
 
-
-
-
-
-
-            
-# def portScanner(target, output_file):
-#     # Define a dictionary of common ports and their associated services
-#     common_ports = {
-#         21: "FTP",
-#         22: "SSH",
-#         23: "Telnet",
-#         25: "SMTP",
-#         53: "DNS",
-#         80: "HTTP",
-#         443: "HTTPS",
-#         3306: "MySQL",
-#         5432: "PostgreSQL",
-#     }
-
-#     def scan_port(host, port):
-#         try:
-#             with telnetlib.Telnet(host, port, timeout=1) as connection:
-#                 banner = connection.read_until(b"\n", timeout=1).decode("utf-8").strip()
-#                 service = common_ports.get(port, "Unknown")
-#                 return port, "open", service, banner
-#         except ConnectionRefusedError:
-#             return port, "closed", "Unknown", ""
-#         except TimeoutError:
-#             return port, "filtered", "Unknown", ""
-#         except Exception as e:
-#             return port, "error", "Unknown", str(e)
-
-#     try:
-#         parsed_url = urlparse(target)
-#         host = socket.gethostbyname(parsed_url.netloc)
-#     except socket.gaierror:
-#         print("Invalid target URL.")
-#         return
-
-#     try:
-#         start_port = int(input("Enter the start port: "))
-#         end_port = int(input("Enter the end port: "))
-
-#         open_ports = []
-
-#         # Define a function to scan a range of ports and collect open ports
-#         def scan_port_range(start, end):
-#             for port in range(start, end + 1):
-#                 result = scan_port(host, port)
-#                 port, status, _, _ = result
-#                 if status == "open":
-#                     open_ports.append(port)
-
-#         # Determine the number of CPU cores available
-#         num_cores = min(4   , os.cpu_count() or 1)
-
-#         # Use concurrent.futures.ThreadPoolExecutor for parallel scanning
-#         with concurrent.futures.ThreadPoolExecutor(max_workers=num_cores) as executor:
-#             # Split the port range into chunks for parallel scanning
-#             chunk_size = (end_port - start_port + 1) // num_cores
-#             futures = []
-
-#             for i in range(num_cores):
-#                 start = start_port + i * chunk_size
-#                 end = start + chunk_size - 1 if i < num_cores - 1 else end_port
-#                 futures.append(executor.submit(scan_port_range, start, end))
-
-#             # Wait for all futures to complete
-#             concurrent.futures.wait(futures)
-
-#         with open(output_file, "a") as report:
-#             report.write(f"Scanning target: {target} ({host})\n")
-#             report.write("Open Ports:\n")
-#             for port in open_ports:
-#                 report.write(f"{port}\n")
-
-#         print(f"Scan completed. Results saved to {output_file}")
-#         print(f"Number of open ports: {len(open_ports)}")
-
-#     except ValueError:
-#         print("Invalid input. Please enter valid port numbers.")
-
-
-def portScanner(target, output_file):
-    nm = nmap.PortScanner()
-
-    try:
-        parsed_url = urlparse(target)
-        host = parsed_url.netloc
-    except ValueError:
-        print("Invalid target URL.")
-        return
-
-    try:
-        start_port = int(input("Enter the start port: "))
-        end_port = int(input("Enter the end port: "))
-
-        # Perform the port scan
-        nm.scan(host, f"{start_port}-{end_port}")
-
-        open_ports = []
-
-        for host, scan_result in nm.all_hosts().items():
-            for port, protocol in scan_result['tcp'].items():
-                if protocol['state'] == 'open':
-                    open_ports.append(port)
-
-        with open(output_file, "a") as report:
-            report.write(f"Scanning target: {target} ({host})\n")
-            report.write("Open Ports:\n")
-            for port in open_ports:
-                report.write(f"{port}\n")
-
-        print(f"Scan completed. Results saved to {output_file}")
-        print(f"Number of open ports: {len(open_ports)}")
-
-    except ValueError:
-        print("Invalid input. Please enter valid port numbers.")
         
 def remote_code_execution(url):
     payload = "system('ls');"
@@ -431,66 +313,6 @@ def robotstxtAvailable(url, output_file):
             report.write("[-]HTTP Error: {}\n".format(e))
 
 
-def urlEncode(url, output_file):
-    sozluk = {" ": "%20", "!": "%21", "#": "%23", "$": "%24", "%": "%25", "&": "%26", "'": "%27", "(": "%28",
-              ")": "%29", "*": "%30", "+": "%2B", ",": "%2C",
-              "-": "%2D", ".": "%2E", "/": "%2F", "0": "%30", "1": "%31", "2": "%32", "3": "%33", "4": "%34",
-              "5": "%35", "6": "%36", "7": "%37", "8": "%38",
-              "9": "%39", ":": "%3A", ";": "%3B", "<": "%3C", "=": "%3D", ">": "%3E", "?": "%3F", "@": "%40",
-              "A": "%41", "B": "%42", "C": "%43", "D": "%44",
-              "E": "%45", "F": "%46", "G": "%47", "H": "%48", "I": "%49", "J": "%4A", "K": "%4B", "L": "%4C",
-              "M": "%4D", "N": "%4E", "O": "%4F", "P": "%50",
-              "Q": "%51", "R": "%52", "S": "%53", "T": "%54", "U": "%55", "V": "%56", "W": "%57", "X": "%58",
-              "Y": "%59", "Z": "%5A", "[": "%5B", "]": "%5D",
-              "^": "%5E", "_": "%5F", "`": "%60", "a": "%61", "b": "%62", "c": "%63", "d": "%64", "e": "%65",
-              "f": "%66", "g": "%67", "h": "%68", "i": "%69",
-              "j": "%6A", "k": "%6B", "l": "%6C", "m": "%6D", "n": "%6E", "o": "%6F", "p": "%70", "q": "%71",
-              "r": "%72", "s": "%73", "t": "%74", "u": "%75",
-              "v": "%76", "w": "%77", "y": "%78", "z": "%7A", "{": "%7B", "|": "%7C", "}": "%7D", "~": "%7E"}
-    encodeURL = ""
-    for i in url:
-        encodeURL += sozluk[i]
-    print("[+]Encoded URL:", encodeURL)
-    report_toadd = "[+]Encoded URL:"+encodeURL+"\n"
-    report = open(output_file, "a")
-    report.write(report_toadd)
-    report.close()
-
-
-def certificateInformation(url, output_file):
-    try:
-        # Use socket.getaddrinfo() to get address information for the hostname
-        addr_info = socket.getaddrinfo(
-            url, 443, socket.AF_INET, socket.SOCK_STREAM)
-        ip_address = addr_info[0][4][0]  # Get the first IP address
-
-        context = ssl.create_default_context()
-        server = context.wrap_socket(socket.socket(), server_hostname=url)
-        server.connect((ip_address, 443))
-        certificate = server.getpeercert()
-
-        serial_number = certificate.get('serialNumber')
-        version = certificate.get('version')
-        valid_from = certificate.get('notBefore')
-        valid_until = certificate.get('notAfter')
-        subject = certificate.get('subject')
-        issuer = certificate.get('issuer')
-        cipher_suite = server.cipher()
-
-        certificate_info = (
-            f"[+] Certificate Serial Number: {serial_number}\n"
-            f"[+] Certificate SSL Version: {version}\n"
-            f"[+] Certificate Valid From: {valid_from}\n"
-            f"[+] Certificate Valid Until: {valid_until}\n"
-            f"[+] Certificate Subject: {subject}\n"
-            f"[+] Certificate Issuer: {issuer}\n"
-            f"[+] Cipher Suite: {cipher_suite}\n"
-            f"[+] Full Certificate: {certificate}\n"
-        )
-
-        write_to_report(output_file, certificate_info)
-    except Exception as e:
-        print(f"[-] Error while fetching certificate information: {str(e)}")
 
 
 

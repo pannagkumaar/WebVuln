@@ -250,7 +250,8 @@ def securityHeadersCheck(url, output_file):
 
     except requests.exceptions.RequestException as e:
         print("Error:", e)
-        
+
+
 def advancedSecurityHeadersCheck(url, output_file):
     try:
         # Send a GET request to the URL
@@ -291,4 +292,66 @@ def advancedSecurityHeadersCheck(url, output_file):
 
     except requests.exceptions.RequestException as e:
         print("Error:", e)
-        return None        
+        return None
+
+
+def urlEncode(url, output_file):
+    sozluk = {" ": "%20", "!": "%21", "#": "%23", "$": "%24", "%": "%25", "&": "%26", "'": "%27", "(": "%28",
+              ")": "%29", "*": "%30", "+": "%2B", ",": "%2C",
+              "-": "%2D", ".": "%2E", "/": "%2F", "0": "%30", "1": "%31", "2": "%32", "3": "%33", "4": "%34",
+              "5": "%35", "6": "%36", "7": "%37", "8": "%38",
+              "9": "%39", ":": "%3A", ";": "%3B", "<": "%3C", "=": "%3D", ">": "%3E", "?": "%3F", "@": "%40",
+              "A": "%41", "B": "%42", "C": "%43", "D": "%44",
+              "E": "%45", "F": "%46", "G": "%47", "H": "%48", "I": "%49", "J": "%4A", "K": "%4B", "L": "%4C",
+              "M": "%4D", "N": "%4E", "O": "%4F", "P": "%50",
+              "Q": "%51", "R": "%52", "S": "%53", "T": "%54", "U": "%55", "V": "%56", "W": "%57", "X": "%58",
+              "Y": "%59", "Z": "%5A", "[": "%5B", "]": "%5D",
+              "^": "%5E", "_": "%5F", "`": "%60", "a": "%61", "b": "%62", "c": "%63", "d": "%64", "e": "%65",
+              "f": "%66", "g": "%67", "h": "%68", "i": "%69",
+              "j": "%6A", "k": "%6B", "l": "%6C", "m": "%6D", "n": "%6E", "o": "%6F", "p": "%70", "q": "%71",
+              "r": "%72", "s": "%73", "t": "%74", "u": "%75",
+              "v": "%76", "w": "%77", "y": "%78", "z": "%7A", "{": "%7B", "|": "%7C", "}": "%7D", "~": "%7E"}
+    encodeURL = ""
+    for i in url:
+        encodeURL += sozluk[i]
+    print("[+]Encoded URL:", encodeURL)
+    report_toadd = "[+]Encoded URL:"+encodeURL+"\n"
+    report = open(output_file, "a")
+    report.write(report_toadd)
+    report.close()
+
+
+def certificateInformation(url, output_file):
+    try:
+        # Use socket.getaddrinfo() to get address information for the hostname
+        addr_info = socket.getaddrinfo(
+            url, 443, socket.AF_INET, socket.SOCK_STREAM)
+        ip_address = addr_info[0][4][0]  # Get the first IP address
+
+        context = ssl.create_default_context()
+        server = context.wrap_socket(socket.socket(), server_hostname=url)
+        server.connect((ip_address, 443))
+        certificate = server.getpeercert()
+
+        serial_number = certificate.get('serialNumber')
+        version = certificate.get('version')
+        valid_from = certificate.get('notBefore')
+        valid_until = certificate.get('notAfter')
+        subject = certificate.get('subject')
+        issuer = certificate.get('issuer')
+        cipher_suite = server.cipher()
+
+        certificate_info = (
+            f"[+] Certificate Serial Number: {serial_number}\n"
+            f"[+] Certificate SSL Version: {version}\n"
+            f"[+] Certificate Valid From: {valid_from}\n"
+            f"[+] Certificate Valid Until: {valid_until}\n"
+            f"[+] Certificate Subject: {subject}\n"
+            f"[+] Certificate Issuer: {issuer}\n"
+            f"[+] Cipher Suite: {cipher_suite}\n"
+            f"[+] Full Certificate: {certificate}\n"
+        )
+
+        write_to_report(output_file, certificate_info)
+    except Exception as e:
+        print(f"[-] Error while fetching certificate information: {str(e)}")
