@@ -48,19 +48,7 @@ url = ""
 
 
 
-def file_input_available(url, output_file):
-    try:
-        page = requests.get(url)
-        tree = html.fromstring(page.content)
-        inputs = tree.xpath('//input[@name]')
-        for input in inputs:
-            input_name = re.search(r'name=["\'](.*?)["\']', input).group(1)
-            print(f"[+]Input Field Name: {input_name}")
-        if any("type='file'" in str(input) for input in inputs):
-            file_info = "[+]File Upload Function available\n"
-            write_to_report(output_file, file_info)
-    except Exception as e:
-        print(f"[-]Error while checking file input: {str(e)}")
+
 
 
 def commandInjection(url, output_file):
@@ -131,51 +119,7 @@ def remote_code_execution(url):
         print("[!] No Remote Code Execution Vulnerability Detected.")
 
 
-def robotstxtAvailable(url, output_file):
-    url += "/robots.txt"
 
-    try:
-        response = requests.get(url)
-        response.raise_for_status()  # Raise an exception for HTTP errors (4xx and 5xx)
-
-        if response.status_code == 200:
-            print("[+]robots.txt available")
-            robots_txt_content = response.text
-            print("robots.txt:\n", robots_txt_content)
-
-            with open(output_file, "a", encoding="utf-8") as report:
-                report.write("[+]robots.txt available\n")
-                report.write("robots.txt:\n")
-                report.write(robots_txt_content)
-                report.write("\n")
-        elif response.status_code == 404:
-            print("[+]robots.txt not found")
-            with open(output_file, "a", encoding="utf-8") as report:
-                report.write("[+]robots.txt not found\n")
-    except requests.exceptions.RequestException as e:
-        # Handle network errors or invalid URLs
-        print("[-]Error:", e)
-        with open(output_file, "a", encoding="utf-8") as report:
-            report.write("[-]Error: {}\n".format(e))
-    except requests.exceptions.HTTPError as e:
-        print("[-]HTTP Error:", e)
-        with open(output_file, "a", encoding="utf-8") as report:
-            report.write("[-]HTTP Error: {}\n".format(e))
-
-
-def FileInputAvailable(url, output_file):
-    page = requests.get(url, verify=False)
-    tree = html.fromstring(page.content)
-    inputs = tree.xpath('//input[@name]')
-    for input in inputs:
-        startPoint = int(str(input).find("'")) + 1
-        stopPoint = int(str(input).find("'", startPoint))
-        print(str(input)[startPoint:stopPoint])
-        if "type='file'" in input:
-            print("[+]File Upload Function available")
-            report = open(output_file, "a")
-            report.write("[+]File Upload Function available\n")
-            report.close()
 
 
 
