@@ -1,6 +1,6 @@
-from find_input import find_input_fields
 from user_agent import UserAgent
 import requests
+from utils import prompt_user,find_input_fields
 
 def prompt_user(what):
     user_input = input(

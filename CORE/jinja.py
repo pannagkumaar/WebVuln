@@ -1,5 +1,5 @@
 import requests
-from find_input import find_input_fields
+from utils import *
 def detect_jinja_vulnerability(url):
     payloads = [
         ('{{199*199}}', '39601'),

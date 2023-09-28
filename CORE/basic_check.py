@@ -2,12 +2,10 @@ import ssl
 import socket
 import requests
 import telnetlib
+from utils import *
 
 
-def write_to_report(output_file, content):
-    # Write content to the report file
-    with open(output_file, "a") as report:
-        report.write(content + "\n")
+
 
 
 def certificate_information(url, output_file):

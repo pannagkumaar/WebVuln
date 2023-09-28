@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+import requests
 def find_input_fields(url):
     try:
         # Send an HTTP GET request to the URL
@@ -17,3 +18,14 @@ def find_input_fields(url):
     except requests.exceptions.RequestException as e:
         print(f"Error fetching URL: {str(e)}")
         return []
+
+def write_to_report(output_file, content):
+    # Write content to the report file
+    with open(output_file, "a") as report:
+        report.write(content + "\n")
+
+
+def prompt_user(what):
+    user_input = input(
+        f"Do you want to perform {what} testing? (yes/no): ").strip().lower()
+    return user_input == 'yes'
