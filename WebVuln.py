@@ -6,7 +6,7 @@ import socket
 import ssl
 from urllib.parse import urlparse
 import telnetlib
-
+from email.utils import parseaddr
 from lxml import html
 # from urllib.parse import urlparse
 import urllib
@@ -21,10 +21,10 @@ from bs4 import BeautifulSoup
 # import threading
 import concurrent.futures
 from CORE.subdomain_scanner import *
-from CORE.who_is import *
-from CORE.dns_dumper import *
-from CORE.credit import *
-
+from CORE.who_is import whois_finder
+from CORE.dns_dumper import dnsdumper
+from CORE.credit import credit
+from CORE.mail import mail
 
 # Disable insecure request warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -144,21 +144,6 @@ def certificate_information(url, output_file):
     except Exception as e:
         print(f"[-] Error while fetching certificate information: {str(e)}")
 
-
-# def method(url, output_file):
-#     try:
-#         telnet_connection = telnetlib.Telnet(url, 80)
-#         telnet_connection.write("OPTIONS / HTTP/1.1\n")
-#         host_header = f"Host: {url}\n\n\n\n"
-#         telnet_connection.write(host_header)
-#         page = telnet_connection.read_all()
-#         allow_index = str(page).find("Allow")
-#         newline_index = str(page).find("\n", allow_index + 1)
-#         methods = page[allow_index:newline_index]
-#         method_info = f"[+]Methods: {methods}\n"
-#         write_to_report(output_file, method_info)
-#     except Exception as e:
-#         print(f"[-]Error while fetching methods: {str(e)}")
 
 
 def IP2Location(url, output_file):
@@ -338,15 +323,6 @@ def directoryTraversal(url, output_file, payload_file="./Payloads/PayloadDirTrav
     except Exception as e:
         print("Error:", e)
 
-# def read_payloads_from_file(payload_file):
-#     try:
-#         with open(payload_file, "r") as file:
-#             payloads = [line.strip() for line in file]
-#         return payloads
-#     except FileNotFoundError:
-#         logging.error(f"Payload file '{payload_file}' not found.")
-#         return []
-
 
 def read_payloads_from_file(payload_file, encoding="utf-8"):
     try:
@@ -442,27 +418,7 @@ def headerInformation(url, output_file):
         print("Error:", e)
 
 
-# def subdomain_and_domain_scanner(url, output_file):
-#     try:
-#         user_agent = UserAgent()
-#         headers = {'User-Agent': user_agent.random}
 
-#         response = requests.get(url, headers=headers, verify=False)
-#         response.raise_for_status()
-
-#         content = response.content.decode('utf-8')
-
-#         # Define a regular expression pattern to capture subdomains and domains
-#         pattern = r"(?i)\bhttps?://([a-z0-9.\-]+[.](?:com|net|org|...))"
-
-#         matches = re.findall(pattern, content)
-
-#         with open(output_file, "a") as report:
-#             for match in matches:
-#                 print("[+] Link:", match)
-#                 report.write(f"[+] Link: {match}\n")
-#     except requests.exceptions.RequestException as e:
-#         logging.error(f"Error: {e}")
 
             
 # def portScanner(target, output_file):
@@ -1149,31 +1105,42 @@ def crawl(url, output_file, num_threads=5):
         print(f"An error occurred: {str(e)}")
 
 
-def mail(url, output_file):
-    try:
-        # Send an HTTP GET request to the URL
-        response = requests.get(url, verify=False)
+# def mail(url, output_file):
+#     try:
+#         # Send an HTTP GET request to the URL
+#         response = requests.get(url, verify=False)
 
-        # Check if the request was successful (status code 200)
-        if response.status_code == 200:
-            # Decode the content to a string
-            content_text = response.content.decode('utf-8', 'ignore')
+#         # Check if the request was successful (status code 200)
+#         if response.status_code == 200:
+#             # Decode the content to a string
+#             content_text = response.content.decode('utf-8', 'ignore')
 
-            # Extract email addresses from the decoded content
-            email_addresses = extract_emails(content_text)
+#             # Extract email addresses from the decoded content
+#             email_addresses = extract_emails(content_text)
 
-            # Print and save the email addresses to the report file
-            with open(output_file, "a") as report:
-                for email in email_addresses:
-                    print("[+]E-mail:", email)
-                    report.write("[+]E-mail: " + email + "\n")
+#             # Print and save the email addresses to the report file
+#             with open(output_file, "a") as report:
+#                 for email in email_addresses:
+#                     print("[+]E-mail:", email)
+#                     report.write("[+]E-mail: " + email + "\n")
 
-        else:
-            print("[-]Failed to fetch the web page. Status code:",
-                  response.status_code)
+#         else:
+#             print("[-]Failed to fetch the web page. Status code:",
+#                   response.status_code)
 
-    except Exception as e:
-        print("[-]An error occurred:", str(e))
+#     except Exception as e:
+#         print("[-]An error occurred:", str(e))
+
+
+# def extract_emails(text):
+#     # Define a more robust email pattern
+#     email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
+
+#     # Use re.findall to find all email addresses in the text
+#     return re.findall(email_pattern, text)
+
+
+
 
 
 def test_open_redirection_payloads(url, payload_file, output_file):
@@ -1229,15 +1196,6 @@ def test_open_redirection_payloads(url, payload_file, output_file):
             error_msg = f"[-] Error: {e}\n"
             print(error_msg)
             logging.error(error_msg)
-
-
-def extract_emails(text):
-    # Define a more robust email pattern
-    email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
-
-    # Use re.findall to find all email addresses in the text
-    return re.findall(email_pattern, text)
-
 
 
 
@@ -1348,14 +1306,14 @@ if args:
         # method(url, output_file)
         # crawl(url, output_file)
         # headerInformation(url, output_file)
-        # mail(url, output_file)
+        mail(url, output_file)
         # credit(url, output_file)
         # portScanner(url, output_file)
         # FileInputAvailable(url, output_file)
         # remote_code_execution(url)
         # detect_jinja_vulnerability(url)
         # test_sql_injection(url, output_file)
-        xss(url, output_file)
+        # xss(url, output_file)
         # test_open_redirection_payloads(
         #     url, "./Payloads/PayloadOpenRed.txt", output_file)
         # commandInjection(url, output_file)
