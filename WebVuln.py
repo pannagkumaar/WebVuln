@@ -1245,7 +1245,7 @@ def extract_emails(text):
 if args:
     url = getattr(args, 'web_URL')
     print(str(url).split("/")[2])
-    output_file = str(url).split("/")[2]+"_report.txt"
+    output_file = "./Report/" + (str(url).split("/")[2]+"_report.txt")
     report = open(output_file, "a")
     report_toadd = url+"\n"
     report.write(report_toadd)
@@ -1281,8 +1281,7 @@ if args:
     elif args.action == "credit":
         credit(url, output_file)
 
-    elif args.action == "links":
-        link(url, output_file)
+    
 
     elif args.action == "commandInjection":
         commandInjection(url, output_file)
@@ -1337,7 +1336,7 @@ if args:
     elif args.action == "full":
 
         # dnsdumper(url, output_file)
-        # whois_finder(url, output_file)
+        whois_finder(url, output_file)
         # IP2Location(url, output_file)
         # certificateInformation(url, output_file)
         # securityHeadersCheck(url, output_file)
@@ -1347,7 +1346,6 @@ if args:
         # robotstxtAvailable(url, output_file)
         # urlEncode(url, output_file)
         # method(url, output_file)
-        # link(url, output_file)
         # crawl(url, output_file)
         # headerInformation(url, output_file)
         # mail(url, output_file)
@@ -1356,7 +1354,7 @@ if args:
         # FileInputAvailable(url, output_file)
         # remote_code_execution(url)
         # detect_jinja_vulnerability(url)
-        test_sql_injection(url, output_file)
+        # test_sql_injection(url, output_file)
         # xss(url, output_file)
         # test_open_redirection_payloads(
         #     url, "./Payloads/PayloadOpenRed.txt", output_file)
