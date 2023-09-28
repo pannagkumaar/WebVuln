@@ -267,7 +267,7 @@ def commandInjection(url, output_file):
 
 
 
-def directoryTraversal(url, output_file, payload_file="payloads.txt", headers=None, cookies=None, timeout=5, max_workers=None):
+def directoryTraversal(url, output_file, payload_file="./Payloads/PayloadDirTrav.txt", headers=None, cookies=None, timeout=5, max_workers=None):
     num_successful, num_unsuccessful = 0, 0
     try:
         if not validators.url(url):
@@ -937,7 +937,7 @@ def xss(url, output_file, num_requests=10):
     xss_payloads = []
 
     try:
-        with open("xsspayload.txt", "r", encoding="utf-8") as xss_file:
+        with open("./Payloads/PayloadXSS.txt", "r", encoding="utf-8") as xss_file:
             xss_payloads = [line.strip() for line in xss_file]
     except Exception as e:
         print("[-] Error loading XSS payloads:", str(e))
@@ -1336,7 +1336,7 @@ if args:
     elif args.action == "full":
 
         # dnsdumper(url, output_file)
-        whois_finder(url, output_file)
+        # whois_finder(url, output_file)
         # IP2Location(url, output_file)
         # certificateInformation(url, output_file)
         # securityHeadersCheck(url, output_file)
@@ -1355,7 +1355,7 @@ if args:
         # remote_code_execution(url)
         # detect_jinja_vulnerability(url)
         # test_sql_injection(url, output_file)
-        # xss(url, output_file)
+        xss(url, output_file)
         # test_open_redirection_payloads(
         #     url, "./Payloads/PayloadOpenRed.txt", output_file)
         # commandInjection(url, output_file)
