@@ -1,5 +1,4 @@
 import argparse
-import requests
 import urllib3
 # import threading
 import concurrent.futures
@@ -19,6 +18,8 @@ from CORE.directoryTraversal import directoryTraversal
 from CORE.xss import xss
 from CORE.sensitive_info import scan_for_sensitive_data
 from CORE.headers_certificates import *
+
+
 # Disable insecure request warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -125,34 +126,34 @@ if args:
 
     elif args.action == "full":
 
-        # dnsdumper(url, output_file)
-        # whois_finder(url, output_file)
-        # IP2Location(url, output_file)
-        # certificateInformation(url, output_file)
-        # securityHeadersCheck(url, output_file)
-        # csrf_scan(url)
-        # broken_auth(url)
-        # advancedSecurityHeadersCheck(url, output_file)
-        # robotstxtAvailable(url, output_file)
-        # urlEncode(url, output_file)
-        # method(url, output_file)
-        # crawl(url, output_file)
-        # headerInformation(url, output_file)
-        # mail(url, output_file)
-        # credit(url, output_file)
-        # portScanner(url, output_file)
-        # FileInputAvailable(url, output_file)
-        # remote_code_execution(url,output_file)
-        # detect_jinja_vulnerability(url)
-        # test_sql_injection(url, output_file)
-        # xss(url, output_file)
+        dnsdumper(url, output_file)
+        whois_finder(url, output_file)
+        IP2Location(url, output_file)
+        certificate_information(url, output_file)
+        securityHeadersCheck(url, output_file)
+        csrf_scan(url)
+        broken_auth(url)
+        advancedSecurityHeadersCheck(url, output_file)
+        robotstxtAvailable(url, output_file)
+        urlEncode(url, output_file)
+        method(url, output_file)
+        crawl(url, output_file)
+        headerInformation(url, output_file)
+        mail(url, output_file)
+        credit(url, output_file)
+        portScanner(url, output_file)
+        file_input_available(url, output_file)
+        remote_code_execution(url,output_file)
+        detect_jinja_vulnerability(url)
+        test_sql_injection(url, output_file)
+        xss(url, output_file)
         test_open_redirection_payloads(
             url, "Payloads/PayloadOpenRed.txt", output_file)
-        # commandInjection(url, output_file)
-        # directoryTraversal(url, output_file)
-        # fileInclude(url, output_file)
-        # subdomain_scanner(url, output_file)
-        # test_for_clickjacking(url,  output_file)
+        commandInjection(url, output_file)
+        directoryTraversal(url, output_file)
+        file_include(url, output_file)
+        subdomain_scanner(url, output_file)
+        test_for_clickjacking(url,  output_file)
     else:
 
         print("Invalid action exiting ", args.action)
