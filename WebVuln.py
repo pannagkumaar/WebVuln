@@ -1076,28 +1076,32 @@ def securityHeadersCheck(url, output_file):
     except requests.exceptions.RequestException as e:
         print("Error:", e)
 
+def broken_auth(url, username, password):
+    try:
+        # Send a request to the login page with the credentials and retrieve the response
+        response = requests.post(url, data={"username": username, "password": password})
 
-def broken_auth(url):
-    # set the login credentials
-    username = "test"
-    password = "password"
+        # Check the response status code
+        if response.status_code == 200:
+            # Check the response for the presence of certain strings or patterns
+            if "incorrect" in response.text.lower():
+                print("[!] Broken Authentication Detected: Incorrect Login Credentials.")
+                print("[+] Remediation: Implement Two-Factor Authentication.")
+            elif "session" in response.cookies:
+                print("[!] Broken Authentication Detected: Session Cookie Found in Response.")
+                print("[+] Remediation: Implement Two-Factor Authentication.")
+            else:
+                print("[+] Authentication Successful.")
+        elif response.status_code == 401:
+            print("[!] Authentication Failed: Unauthorized.")
+        elif response.status_code == 403:
+            print("[!] Authentication Failed: Forbidden.")
+        else:
+            print(f"[!] Error: {response.status_code} - Unable to connect to the server.")
+    except requests.exceptions.RequestException as e:
+        print(f"[!] Error: {e}")
+        print("[+] Remediation: Check the target URL or network connectivity.")
 
-    # send a request to the login page with the credentials and retrieve the response
-    response = requests.post(
-        url, data={"username": username, "password": password})
-
-    # check the response for the presence of certain strings or patterns that may indicate a vulnerability
-    if "incorrect" in response.text:
-        print("[!] Broken Authentication Detected: Incorrect Login Credentials.")
-        print("[+] Remedation: Implement Two Factor Authentication.")
-
-    elif "session" in response.cookies:
-        print("[!] Broken Authentication Detected: Session Cookie Found in Response.")
-        print("[+] Remedation: Implement Two Factor Authentication.")
-
-    else:
-        print("[!] No Broken Authenitcation Vulnerability Detected.")
-        print("[+] Remedation: Implement Two Factor Authentication.")
 
 
 def crawl(url, output_file, num_threads=5):
