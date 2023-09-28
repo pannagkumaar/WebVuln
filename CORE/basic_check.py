@@ -2,7 +2,7 @@ import ssl
 import socket
 import requests
 import telnetlib
-from CORE.util import *
+from CORE.util import write_to_report
 
 
 

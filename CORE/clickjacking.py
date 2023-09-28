@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent
 import requests
+from CORE.util import write_to_report
 
 def test_for_clickjacking(url, output_file):
     def check_for_frame_busting_scripts(soup):
