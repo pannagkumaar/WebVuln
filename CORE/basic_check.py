@@ -218,7 +218,7 @@ def robotstxtAvailable(url, output_file):
  
 
 def urlEncode(url, output_file):
-    sozluk = {" ": "%20", "!": "%21", "#": "%23", "$": "%24", "%": "%25", "&": "%26", "'": "%27", "(": "%28",
+    char = {" ": "%20", "!": "%21", "#": "%23", "$": "%24", "%": "%25", "&": "%26", "'": "%27", "(": "%28",
               ")": "%29", "*": "%30", "+": "%2B", ",": "%2C",
               "-": "%2D", ".": "%2E", "/": "%2F", "0": "%30", "1": "%31", "2": "%32", "3": "%33", "4": "%34",
               "5": "%35", "6": "%36", "7": "%37", "8": "%38",
@@ -235,28 +235,36 @@ def urlEncode(url, output_file):
               "v": "%76", "w": "%77", "y": "%78", "z": "%7A", "{": "%7B", "|": "%7C", "}": "%7D", "~": "%7E"}
     encodeURL = ""
     for i in url:
-        encodeURL += sozluk[i]
+        encodeURL += char[i]
     print("[+]Encoded URL:", encodeURL)
     report_toadd = "[+]Encoded URL:"+encodeURL+"\n"
     report = open(output_file, "a")
     report.write(report_toadd)
     report.close()
 
-def remote_code_execution(url,output_file):
-    payload = "system('ls');"
-    # sending request to the URL with the payload and retrieve the response
-    response = requests.get(url, params={"input": payload})
+def remote_code_execution(output_file,url: str, payload: str,) -> None:
+    """
+    Check for possible Remote Code Execution vulnerability by sending a payload to the given URL.
+    
+    :param url: The URL to test for RCE.
+    :param payload: The payload to execute on the remote server.
+    """
+    try:
+        response = requests.get(url, params={"input": payload})
+        response.raise_for_status()  # Raise an exception if the HTTP request fails
 
-    # check the response for the presence of certain strings or patterns that may indicate a vulnerability
-    if "total" in response.text:
-        print(
-            "[!] Possible RCE vulnerability detected: command output found in response")
-        print("[+] Remedation: Use Secure Coding Practices.")
-
-    else:
-        print("[!] No Remote Code Execution Vulnerability Detected.")
-
-
+        if "total" in response.text:
+            print("[!] Possible RCE vulnerability detected: command output found in response")
+            print("[+] Remediation: Use Secure Coding Practices.")
+           
+            if output_file:
+                with open(output_file, "w") as f:
+                    f.write(response.text)
+        else:
+            print("[!] No Remote Code Execution Vulnerability Detected.")
+    
+    except requests.RequestException as e:
+        print(f"Error: {e}")
 
 
 def file_input_available(url, output_file):

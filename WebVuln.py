@@ -31,9 +31,6 @@ args = parser.parse_args()
 url = ""
 
 
-
-
-
 if args:
     url = getattr(args, 'web_URL')
     print(str(url).split("/")[2])
@@ -48,7 +45,10 @@ if args:
 
     elif args.action == "whois":
         whois_finder(url, output_file)
-
+    elif args.action == "urlEncode":
+        urlEncode(url, output_file)
+    elif args.action == "rce":
+        remote_code_execution(url, output_file)
     elif args.action == "portscanner":
         if str(url).split("/")[2]:
             url = str(url).split("/")[2]
@@ -73,8 +73,6 @@ if args:
     elif args.action == "credit":
         credit(url, output_file)
 
-    
-
     elif args.action == "commandInjection":
         commandInjection(url, output_file)
 
@@ -82,7 +80,9 @@ if args:
         directoryTraversal(url, output_file)
 
     elif args.action == "fileInclude":
-        fileInclude(url, output_file)
+        file_include(url, output_file)
+    elif args.action == "robots":
+        robotstxtAvailable(url, output_file)
 
     elif args.action == "headerCheck":
         headerInformation(url, output_file)
@@ -94,7 +94,7 @@ if args:
             url = str(url).split("/")[2]
 
         print(url)
-        certificateInformation(url, output_file)
+        certificate_information(url, output_file)
 
     elif args.action == "method":
         if str(url).split("/")[2]:
@@ -110,9 +110,7 @@ if args:
     elif args.action == "FileInputAvailable":
         file_input_available(url, output_file)
     if args.action == "remote_code_execution":
-        remote_code_execution(url,output_file)
-    elif args.action == "certificateInformation":
-        certificateInformation(url, output_file)
+        remote_code_execution(url, output_file)
     elif args.action == "securityHeadersCheck":
         securityHeadersCheck(url, output_file)
     elif args.action == "test_open_redirection_payloads":
