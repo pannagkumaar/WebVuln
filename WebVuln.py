@@ -27,6 +27,7 @@ from CORE.credit import credit
 from CORE.mail import mail
 from CORE.basic_check import *
 from CORE.portscanner import portScanner
+from CORE.jinja import detect_jinja_vulnerability
 
 # Disable insecure request warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -352,52 +353,16 @@ def find_input_fields(url):
         return []
 
 
-def submit_form(url, form_data):
-    try:
-        response = requests.post(url, data=form_data)
-        return response, response.status_code == 200
+# def submit_form(url, form_data):
+#     try:
+#         response = requests.post(url, data=form_data)
+#         return response, response.status_code == 200
 
-    except requests.exceptions.RequestException as e:
-        print(f"[-] Error: {e}")
-        return None, False
+#     except requests.exceptions.RequestException as e:
+#         print(f"[-] Error: {e}")
+#         return None, False
 
 
-def detect_jinja_vulnerability(url):
-    payloads = [
-        ('{{199*199}}', '39601'),
-        ('{{7*7}}', '49')
-    ]
-
-    try:
-        # Find input fields on the page
-        input_fields = find_input_fields(url)
-
-        if input_fields is None or not input_fields:
-            print("No input fields found on the page.")
-            return
-
-        for field1 in input_fields:
-            for field2 in input_fields:
-                if field1 != field2:
-                    for payload, expected_response in payloads:
-                        field_name1 = field1.get('name', 'Unnamed1')
-                        field_name2 = field2.get('name', 'Unnamed2')
-
-                        # Create a dictionary with the payload in one field and an empty string in the other
-                        data = {field_name1: payload, field_name2: ''}
-
-                        # Perform a POST request with the payload data
-                        response = requests.post(url, data=data)
-
-                        # Check if the expected response is in the content of the response
-                        if expected_response in response.text:
-                            print(
-                                f"[+] Jinja2 Vulnerability Detected! (Payload used: {payload}, Fields: {field_name1}, {field_name2})")
-                            return
-        print("[-] Jinja2 Vulnerability Not Detected")
-        return
-    except requests.exceptions.RequestException as e:
-        print(f"Error: {str(e)}")
 
 
 def test_sql_injection(url, output_file, method='GET', parameters=None, payload_file="Payloads/PayloadSQL"):
@@ -804,9 +769,9 @@ if args:
     elif args.action == "full":
 
         # dnsdumper(url, output_file)
-        whois_finder(url, output_file)
-        IP2Location(url, output_file)
-        certificateInformation(url, output_file)
+        # whois_finder(url, output_file)
+        # IP2Location(url, output_file)
+        # certificateInformation(url, output_file)
         # securityHeadersCheck(url, output_file)
         # csrf_scan(url)
         # broken_auth(url)
@@ -821,7 +786,7 @@ if args:
         # portScanner(url, output_file)
         # FileInputAvailable(url, output_file)
         # remote_code_execution(url)
-        # detect_jinja_vulnerability(url)
+        detect_jinja_vulnerability(url)
         # test_sql_injection(url, output_file)
         # xss(url, output_file)
         # test_open_redirection_payloads(
