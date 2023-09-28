@@ -2,7 +2,7 @@ import ssl
 import socket
 import requests
 import telnetlib
-from utils import *
+from CORE.util import *
 
 
 

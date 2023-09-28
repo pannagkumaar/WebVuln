@@ -1,12 +1,12 @@
-from user_agent import UserAgent
+from fake_useragent import UserAgent
 import requests
-from utils import prompt_user,find_input_fields
+from CORE.util import prompt_user,find_input_fields
 
 def prompt_user(what):
     user_input = input(
         f"Do you want to perform {what} testing? (yes/no): ").strip().lower()
     return user_input == 'yes'
-def test_sql_injection(url, output_file, method='GET', parameters=None, payload_file="Payloads/PayloadSQL"):
+def test_sql_injection(url, output_file, method='GET', parameters=None, payload_file="Payloads\PayloadSQL.txt"):
     try:
         if method not in ('GET', 'POST'):
             raise ValueError("Invalid HTTP method. Use 'GET' or 'POST'.")

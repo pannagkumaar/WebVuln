@@ -28,7 +28,8 @@ from CORE.mail import mail
 from CORE.basic_check import *
 from CORE.portscanner import portScanner
 from CORE.jinja import detect_jinja_vulnerability
-
+from CORE.sql_injection import test_sql_injection
+from CORE.openredir import test_open_redirection_payloads
 # Disable insecure request warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -39,29 +40,6 @@ parser.add_argument("-a", "--action", help="Action: full xss sql fuzzing e-mail 
 parser.add_argument("-u", "--web_URL", help="URL")
 args = parser.parse_args()
 url = ""
-
-
-def prompt_user(what):
-    user_input = input(
-        f"Do you want to perform {what} testing? (yes/no): ").strip().lower()
-    return user_input == 'yes'
-
-
-def is_valid_url(url):
-    try:
-        response = requests.head(url, allow_redirects=False)
-        return response.status_code == 200
-    except requests.exceptions.RequestException:
-        return False
-
-
-
-
-
-
-
-
-    
 
 
 
@@ -104,8 +82,6 @@ def commandInjection(url, output_file):
             report.close()
     except:
         pass
-
-
 
 
 def directoryTraversal(url, output_file, payload_file="./Payloads/PayloadDirTrav.txt", headers=None, cookies=None, timeout=5, max_workers=None):
@@ -179,15 +155,6 @@ def directoryTraversal(url, output_file, payload_file="./Payloads/PayloadDirTrav
     except Exception as e:
         print("Error:", e)
 
-
-def read_payloads_from_file(payload_file, encoding="utf-8"):
-    try:
-        with open(payload_file, "r", encoding=encoding) as file:
-            payloads = file.readlines()
-        return [payload.strip() for payload in payloads]
-    except Exception as e:
-        print(f"[-] Error reading payloads from file: {e}")
-        return []
 
 
 def fileInclude(url, output_file):
@@ -263,10 +230,6 @@ def robotstxtAvailable(url, output_file):
             report.write("[-]HTTP Error: {}\n".format(e))
 
 
-
-
-
-
 def FileInputAvailable(url, output_file):
     page = requests.get(url, verify=False)
     tree = html.fromstring(page.content)
@@ -310,11 +273,6 @@ def find_input_fields(url):
 #     except requests.exceptions.RequestException as e:
 #         print(f"[-] Error: {e}")
 #         return None, False
-
-
-
-
-
 
 
 
@@ -439,9 +397,6 @@ def scan_for_sensitive_data(urls_to_scan, output_file):
         print("[-] Error writing to the output file:", str(e))
 
 
-
-
-
 def crawl(url, output_file, num_threads=5):
     session = requests.Session()
     session.verify = False
@@ -485,64 +440,6 @@ def crawl(url, output_file, num_threads=5):
         print("crawl.txt not found.")
     except Exception as e:
         print(f"An error occurred: {str(e)}")
-
-
-
-def test_open_redirection_payloads(url, payload_file, output_file):
-    if not prompt_user("open redirection payload"):
-        print("Testing aborted by user.")
-        return
-
-    payloads = read_payloads_from_file(payload_file)
-
-    if not payloads:
-        print("[-] No payloads to test.")
-        return
-
-    logging.basicConfig(filename=output_file,
-                        level=logging.INFO, format="%(message)s")
-
-    for payload in payloads:
-        payload = payload.strip()  # Remove leading/trailing whitespaces and newlines
-        try:
-            encoded_payload = urllib.parse.quote(payload)
-            test_url = f"{url}?redirect={encoded_payload}"
-
-            if not is_valid_url(test_url):
-                result = f"[-] Invalid URL: {test_url}\n"
-                print(result)
-                logging.error(result)
-                continue
-
-            response = requests.get(test_url, allow_redirects=False)
-
-            if response.status_code == 302 and 'Location' in response.headers:
-                result = f"[+] Payload: {payload} - Open Redirection FOUND!\n"
-                result += f"[+] Redirect URL: {response.headers['Location']}\n"
-            else:
-                result = f"[-] Payload: {payload} - Not Vulnerable\n"
-
-            print(result)
-            logging.info(result)
-
-        except requests.exceptions.ConnectionError as e:
-            error_msg = f"[-] Error (Connection): {e}\n"
-            print(error_msg)
-            logging.error(error_msg)
-        except requests.exceptions.Timeout as e:
-            error_msg = f"[-] Error (Timeout): {e}\n"
-            print(error_msg)
-            logging.error(error_msg)
-        except requests.exceptions.HTTPError as e:
-            error_msg = f"[-] Error (HTTP): {e}\n"
-            print(error_msg)
-            logging.error(error_msg)
-        except Exception as e:
-            error_msg = f"[-] Error: {e}\n"
-            print(error_msg)
-            logging.error(error_msg)
-
-
 
 
 if args:
@@ -656,11 +553,11 @@ if args:
         # portScanner(url, output_file)
         # FileInputAvailable(url, output_file)
         # remote_code_execution(url)
-        detect_jinja_vulnerability(url)
+        # detect_jinja_vulnerability(url)
         # test_sql_injection(url, output_file)
         # xss(url, output_file)
-        # test_open_redirection_payloads(
-        #     url, "./Payloads/PayloadOpenRed.txt", output_file)
+        test_open_redirection_payloads(
+            url, "Payloads/PayloadOpenRed.txt", output_file)
         # commandInjection(url, output_file)
         # directoryTraversal(url, output_file)
         # fileInclude(url, output_file)

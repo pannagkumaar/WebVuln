@@ -1,5 +1,5 @@
 import requests
-from utils import *
+from CORE.util import *
 def detect_jinja_vulnerability(url):
     payloads = [
         ('{{199*199}}', '39601'),
