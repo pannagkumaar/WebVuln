@@ -18,6 +18,7 @@ from CORE.directoryTraversal import directoryTraversal
 from CORE.xss import xss
 from CORE.sensitive_info import scan_for_sensitive_data
 from CORE.headers_certificates import *
+from CORE.wappalyzer_check import analyze_website
 
 
 
@@ -39,7 +40,7 @@ if args:
     url = getattr(args, 'web_URL')
     print(str(url).split("/")[2])
     output_file = "./Report/" + (str(url).split("/")[2]+"_report.txt")
-    report = open(output_file, "a")
+    report = open(output_file, "a+")
     report_toadd = url+"\n"
     report.write(report_toadd)
     report.close()
@@ -113,7 +114,7 @@ if args:
 
     elif args.action == "FileInputAvailable":
         file_input_available(url, output_file)
-    if args.action == "remote_code_execution":
+    elif args.action == "remote_code_execution":
         remote_code_execution(url, output_file)
     elif args.action == "securityHeadersCheck":
         securityHeadersCheck(url, output_file)
@@ -126,10 +127,14 @@ if args:
         broken_auth(url)
     elif args.action == "advancedSecurityHeadersCheck":
         advancedSecurityHeadersCheck(url, output_file)
+        
+    elif args.action == "tech_stack":
+        analyze_website(url, output_file)    
 
     elif args.action == "full":
 
         dnsdumper(url, output_file)
+        analyze_website(url, output_file)
         whois_finder(url, output_file)
         IP2Location(url, output_file)
         certificate_information(url, output_file)
