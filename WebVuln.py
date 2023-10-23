@@ -116,8 +116,7 @@ if args:
         file_input_available(url, output_file)
     elif args.action == "remote_code_execution":
         remote_code_execution(url, output_file)
-    elif args.action == "securityHeadersCheck":
-        securityHeadersCheck(url, output_file)
+    
     elif args.action == "test_open_redirection_payloads":
         test_open_redirection_payloads(
             url, "./Payloads/PayloadOpenRed.txt", output_file)
@@ -138,7 +137,6 @@ if args:
         whois_finder(url, output_file)
         IP2Location(url, output_file)
         certificate_information(url, output_file)
-        securityHeadersCheck(url, output_file)
         csrf_scan(url)
         broken_auth(url)
         advancedSecurityHeadersCheck(url, output_file)

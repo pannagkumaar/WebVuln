@@ -61,6 +61,13 @@ def advancedSecurityHeadersCheck(url, output_file):
             "X-Content-Type-Options": "X-Content-Type-Options",
             "X-Frame-Options": "X-Frame-Options",
             "X-XSS-Protection": "X-XSS-Protection",
+            "Cache-Control": "Cache-Control",
+            "Pragma": "Pragma",
+            "Referrer-Policy": "Referrer-Policy",
+            "Server": "Server",
+            "Feature-Policy": "Feature-Policy",
+            "X-Permitted-Cross-Domain-Policies": "X-Permitted-Cross-Domain-Policies",
+            "Expect-CT": "Expect-CT",
         }
 
         # Initialize a dictionary to store header check results
@@ -72,10 +79,7 @@ def advancedSecurityHeadersCheck(url, output_file):
                 header_value = response_headers[header_name]
                 header_check_results[header_description] = header_value
                 result = f"[+] {header_description} header found: {header_value}"
-            else:
-                header_check_results[header_description] = None
-                result = f"[-] {header_description} header not found"
-
+            
             # Write the result to the report file
             with open(output_file, "a") as report:
                 report.write(result + "\n")
@@ -87,32 +91,6 @@ def advancedSecurityHeadersCheck(url, output_file):
         print("Error:", e)
         return None
     
-def securityHeadersCheck(url, output_file):
-    try:
-        response = requests.get(url, verify=False)
-        response.raise_for_status()
-
-        # Check for the presence of security headers (e.g., CSP, HSTS, X-Content-Type-Options)
-        security_headers = response.headers
-
-        if "Content-Security-Policy" in security_headers:
-            result = "[+] Content Security Policy (CSP) header found"
-            with open(output_file, "a") as report:
-                report.write(result + "\n")
-
-        if "Strict-Transport-Security" in security_headers:
-            result = "[+] Strict Transport Security (HSTS) header found"
-            with open(output_file, "a") as report:
-                report.write(result + "\n")
-
-        if "X-Content-Type-Options" in security_headers:
-            result = "[+] X-Content-Type-Options header found"
-            with open(output_file, "a") as report:
-                report.write(result + "\n")
-
-    except requests.exceptions.RequestException as e:
-        print("Error:", e)
-
 
 def headerInformation(url, output_file):
     try:

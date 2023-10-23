@@ -1,6 +1,6 @@
 from Wappalyzer import Wappalyzer, WebPage
 
-def analyzeWebsite(url, output_file):
+def analyze_website(url, output_file):
     try:
         webpage = WebPage.new_from_url(url)
         wappalyzer = Wappalyzer.latest()
@@ -16,7 +16,3 @@ def analyzeWebsite(url, output_file):
     except Exception as e:
         print(f"An error occurred: {str(e)}")
 
-# Usage
-url = 'http://abhayasecure.com'
-output_file = 'wappalyzer_report.txt'
-analyzeWebsite(url, output_file)
