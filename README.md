@@ -32,6 +32,7 @@ WebVuln is a powerful and comprehensive web application vulnerability scanner de
 - **Directory Traversal Testing:** Assess the presence of directory traversal vulnerabilities.
 - **File Inclusion Vulnerability Testing:** Test for file inclusion vulnerabilities.
 - **Subdomain and Domain Scanner:** Scan for subdomains and domains within the target URL.
+- **Wappalyzer:** Scan the website for the tech stack that it is made of 
 
 
 Choose the specific action you want to perform by specifying the appropriate action flag when running WebVuln.
